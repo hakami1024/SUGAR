@@ -4,7 +4,7 @@ import os
 import re
 
 import numpy as np
-from keras.utils import to_categorical
+from tensorflow.keras.utils import to_categorical
 from sklearn import preprocessing
 
 min_max_scaler = preprocessing.MinMaxScaler()
