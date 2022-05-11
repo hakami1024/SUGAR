@@ -125,14 +125,15 @@ class HGANP(object):
         self.build_placeholders()
         self.forward_propagation()
         train_var = tf.compat.v1.trainable_variables()
-        self.l2 = tf.contrib.layers.apply_regularization(
-            tf.contrib.layers.l2_regularizer(0.01), train_var)
+        # self.l2 = tf.contrib.layers.apply_regularization(
+        #     tf.contrib.layers.l2_regularizer(0.01), train_var)
         self.pred = tf.to_int32(tf.argmax(self.probabilities, 1))
         correct_prediction = tf.equal(self.pred, self.labels)
         self.accuracy = tf.reduce_mean(tf.cast(correct_prediction, "float"))
 
-        self.optimizer = tf.compat.v1.train.MomentumOptimizer(
-            self.lr, self.mom).minimize(self.loss + self.l2)
+        # self.optimizer = tf.compat.v1.train.MomentumOptimizer(
+        #     self.lr, self.mom).minimize(self.loss + self.l2)
+        self.optimizer = tf.compat.v1.train.MomentumOptimizer(self.lr, self.mom).minimize(self.loss +tf.compat.v1.losses.get_regularization_losses())
         self.init = tf.global_variables_initializer()
         self.saver = tf.compat.v1.train.Saver(tf.global_variables())
 
