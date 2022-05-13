@@ -156,7 +156,7 @@ class GAT(BaseGAttN):
     def inference(self, inputs, nb_classes, bias_mat, hid_units,
                   n_heads, activation=tf.nn.elu, residual=False, k=0.5):
 
-        select_num = tf.cast(inputs.shape[1].value * k, dtype=tf.int32)
+        select_num = tf.cast(inputs.shape[1] * k, dtype=tf.int32)
 
         # mean_sum = tf.reduce_sum(tf.square(inputs), -1)
         p = tf.Variable(tf.random.truncated_normal([int(inputs.shape[-1]), 1], stddev=0.1))
