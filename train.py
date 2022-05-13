@@ -129,13 +129,13 @@ class HGANP(object):
         #     tf.contrib.layers.l2_regularizer(0.01), train_var)
         self.pred = tf.to_int32(tf.argmax(self.probabilities, 1))
         correct_prediction = tf.equal(self.pred, self.labels)
-        self.accuracy = tf.reduce_mean(tf.cast(correct_prediction, "float"))
+        self.accuracy = tf.reduce_mean(input_tensor=tf.cast(correct_prediction, "float"))
 
         # self.optimizer = tf.compat.v1.train.MomentumOptimizer(
         #     self.lr, self.mom).minimize(self.loss + self.l2)
         self.optimizer = tf.compat.v1.train.MomentumOptimizer(self.lr, self.mom).minimize(self.loss +tf.compat.v1.losses.get_regularization_losses())
-        self.init = tf.global_variables_initializer()
-        self.saver = tf.compat.v1.train.Saver(tf.global_variables())
+        self.init = tf.compat.v1.global_variables_initializer()
+        self.saver = tf.compat.v1.train.Saver(tf.compat.v1.global_variables())
 
 
     def mlp(self,
@@ -144,7 +144,7 @@ class HGANP(object):
             output_dim,
             activation=None):
 
-        W = tf.Variable(tf.truncated_normal(
+        W = tf.Variable(tf.random.truncated_normal(
             [input_dim, output_dim], stddev=0.1))
         b = tf.Variable(tf.zeros([output_dim]))
         XWb = tf.matmul(inputs, W) + b
@@ -182,7 +182,7 @@ class HGANP(object):
             self.d_matrix = self.sub_adj[:, i, :, :]
             gcn_out = GCN(
                 self.sub_feature[:, i, :, :], self.d_matrix, self.output_dim, dropout=0.5).build()
-            gcn_out = tf.matmul(tf.transpose(gcn_out, [0, 2, 1]), W)
+            gcn_out = tf.matmul(tf.transpose(a=gcn_out, perm=[0, 2, 1]), W)
             gcn_outs.append(tf.reshape(gcn_out, [-1, 1, gcn_out.shape[1]]))
         self.gcn_result = tf.concat(gcn_outs, 1)
 
@@ -194,7 +194,7 @@ class HGANP(object):
             gcn_out_dsi = GCN(
                 self.sub_feature_dsi[:, i, :, :], self.d_matrix_dsi, self.output_dim, dropout=0.5).build()
             gcn_out_dsi = tf.matmul(tf.transpose(
-                gcn_out_dsi, [0, 2, 1]), W_dsi)
+                a=gcn_out_dsi, perm=[0, 2, 1]), W_dsi)
             gcn_outs_dsi.append(tf.reshape(
                 gcn_out_dsi, [-1, 1, gcn_out_dsi.shape[1]]))
         self.gcn_result_dsi = tf.concat(gcn_outs_dsi, 1)
@@ -207,7 +207,7 @@ class HGANP(object):
             _, gcn_out, _, _, _, _ = attention_model.inference(self.sub_feature[:, i, :, :], self.ncluster, 0,
                                                                self.output_dim, n_heads, nonlinearity,
                                                                residual, 1)
-            gcn_out = tf.matmul(tf.transpose(gcn_out, [0, 2, 1]), W)
+            gcn_out = tf.matmul(tf.transpose(a=gcn_out, perm=[0, 2, 1]), W)
             gcn_outs.append(tf.reshape(gcn_out, [-1, 1, gcn_out.shape[1]]))
         self.gcn_result = tf.concat(gcn_outs, 1)
 
@@ -220,7 +220,7 @@ class HGANP(object):
                                                                    self.output_dim, n_heads, nonlinearity,
                                                                    residual, 1)
             gcn_out_dsi = tf.matmul(tf.transpose(
-                gcn_out_dsi, [0, 2, 1]), W_dsi)
+                a=gcn_out_dsi, perm=[0, 2, 1]), W_dsi)
             gcn_outs_dsi.append(tf.reshape(
                 gcn_out_dsi, [-1, 1, gcn_out_dsi.shape[1]]))
         self.gcn_result_dsi = tf.concat(gcn_outs_dsi, 1)
@@ -289,18 +289,18 @@ class HGANP(object):
         x = tf.expand_dims(x, 2)
         x = tf.expand_dims(x, 4)
         x = tf.tile(x, tf.stack([1, 1, out_dim, 1, y.shape[-1]]))
-        tmp = tf.reduce_sum(tf.multiply(x, w), 3)
+        tmp = tf.reduce_sum(input_tensor=tf.multiply(x, w), axis=3)
 
         y = tf.expand_dims(y, 2)
         y = tf.tile(y, tf.stack([1, 1, out_dim, 1]))
         if flag:
             tmp = tf.tile(tmp, (num_infoGraph, 1, 1, 1))
-        out = tf.reduce_sum(tf.multiply(tmp, y), 3)
+        out = tf.reduce_sum(input_tensor=tf.multiply(tmp, y), axis=3)
 
         return out
 
     def forward_propagation(self):
-        with tf.variable_scope('sub_gcn'):
+        with tf.compat.v1.variable_scope('sub_gcn'):
             if sg_encoder == 'GCN':
                 self.sub_GCN()
             elif sg_encoder == 'GAT':
@@ -310,15 +310,15 @@ class HGANP(object):
             elif sg_encoder == 'SAGE':
                 self.sub_SAGE()
 
-        with tf.variable_scope('graph_gat'):
+        with tf.compat.v1.variable_scope('graph_gat'):
             self.graph_gat()
 
-        with tf.variable_scope('fn'):
-            vote_layer = tf.reduce_sum(self.gat_result, axis=1)
+        with tf.compat.v1.variable_scope('fn'):
+            vote_layer = tf.reduce_sum(input_tensor=self.gat_result, axis=1)
             self.loss = tf.compat.v1.losses.sparse_softmax_cross_entropy(
                 labels=self.labels, logits=vote_layer)
 
-            global_embedding = tf.reduce_sum(self.gatembedding, axis=1)
+            global_embedding = tf.reduce_sum(input_tensor=self.gatembedding, axis=1)
             global_embedding = tf.tile(tf.expand_dims(
                 global_embedding, 1), (1, self.num_subg, 1))
             sc = self.bilinear(global_embedding, self.gatembedding, 1, False)
@@ -327,15 +327,15 @@ class HGANP(object):
             self.sc = tf.sigmoid(tf.concat([sc, sc_dsi], 1))
             self.sc = tf.concat([self.sc, 1 - self.sc], 2)
             self.loss += MI_loss * \
-                         tf.losses.sparse_softmax_cross_entropy(
+                         tf.compat.v1.losses.sparse_softmax_cross_entropy(
                              labels=self.label_mi, logits=self.sc)
             self.probabilities = tf.nn.softmax(
                 vote_layer, name="probabilities")
-            self.sub_true = tf.to_int32(tf.argmax(self.gat_result, 2))
+            self.sub_true = tf.cast(tf.argmax(input=self.gat_result, axis=2), dtype=tf.int32)
             self.tmp_labels = tf.tile(tf.expand_dims(
                 self.labels, 1), (1, self.num_subg))
             self.RL_reward = tf.reduce_mean(
-                tf.cast(tf.equal(self.sub_true, self.tmp_labels), "float"))
+                input_tensor=tf.cast(tf.equal(self.sub_true, self.tmp_labels), "float"))
 
     def train(self, batch_x, batch_x_dsi, batch_adj, batch_t, batch_t_mi, batch_mask, learning_rate=1e-3, momentum=0.9,
               k=0.5):
@@ -397,12 +397,12 @@ def main(params):
     test_size = int(feature.shape[0] / folds)
     train_size = feature.shape[0] - test_size
     learning_rate = learning_rate
-    with tf.Session() as sess:
+    with tf.compat.v1.Session() as sess:
         net = HGANP(sess, feature.shape[-1], ncluster, num_subg,
                     subg_size, batch_size, learning_rate, momentum)
         accs = []
         for fold in range(folds):
-            sess.run(tf.global_variables_initializer())
+            sess.run(tf.compat.v1.global_variables_initializer())
             vir_acc_fold = []
             if fold < folds - 1:
                 train_x, train_t, train_sadj, train_mask, train_x_dsi, train_t_dsi, train_sadj_dsi, train_mask_dsi, \

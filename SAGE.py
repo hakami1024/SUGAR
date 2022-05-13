@@ -13,13 +13,13 @@ def zeros(shape, name=None):
 def glorot(shape, name=None):
     """Glorot & Bengio (AISTATS 2010) init."""
     init_range = np.sqrt(6.0 / (shape[0] + shape[1]))
-    initial = tf.random_uniform(shape, minval=-init_range, maxval=init_range, dtype=tf.float32)
+    initial = tf.random.uniform(shape, minval=-init_range, maxval=init_range, dtype=tf.float32)
     return tf.Variable(initial, name=name)
 
 
 def dot(x, y, sparse=False):
     """Wrapper for tf.matmul (sparse vs dense)."""
-    res = tf.layers.conv2d(x, y[1], [1, y[0]])
+    res = tf.compat.v1.layers.conv2d(x, y[1], [1, y[0]])
     return res[:, :, 0, :]
 
 
@@ -63,22 +63,22 @@ class GraphConvolution(Layer):
         self.input = input
         self.output_dim = output_dim
 
-        with tf.variable_scope(self.name + '_vars'):
+        with tf.compat.v1.variable_scope(self.name + '_vars'):
             if self.bias:
                 self.vars['bias'] = zeros([output_dim], name='bias')
 
     def call(self):
-        with tf.name_scope(self.name):
+        with tf.compat.v1.name_scope(self.name):
             outputs = self._call(self.input)
         return outputs
 
     def _call(self, inputs):
         # print(inputs)
         x = inputs
-        x = tf.nn.dropout(x, self.dropout)
+        x = tf.nn.dropout(x, rate=1 - (self.dropout))
 
         # convolve
-        tmp = tf.tile(tf.expand_dims(tf.reduce_sum(self.adj_matrix, axis=-1), -1), (1, 1, x.shape[-1]))
+        tmp = tf.tile(tf.expand_dims(tf.reduce_sum(input_tensor=self.adj_matrix, axis=-1), -1), (1, 1, x.shape[-1]))
         x = tf.matmul(self.adj_matrix, x) / tmp
         # print(x.shape)
         self.weight = glorot([int(self.input.shape[-1]), int(self.output_dim)])
