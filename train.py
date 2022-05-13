@@ -127,7 +127,7 @@ class HGANP(object):
         train_var = tf.compat.v1.trainable_variables()
         # self.l2 = tf.contrib.layers.apply_regularization(
         #     tf.contrib.layers.l2_regularizer(0.01), train_var)
-        self.pred = tf.to_int32(tf.argmax(self.probabilities, 1))
+        self.pred = tf.cast(tf.argmax(self.probabilities, 1), tf.int32)
         correct_prediction = tf.equal(self.pred, self.labels)
         self.accuracy = tf.reduce_mean(input_tensor=tf.cast(correct_prediction, "float"))
 
